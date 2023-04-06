@@ -58,8 +58,7 @@ const addUser = function (user) {
   console.log('user: ', user)
   return pool.query(`INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *`, [user.name, user.email, user.password])
   .then((res) => {
-    console.log('user added to databse', res)
-    console.log('RETURNING', res)
+    console.log('user added to databse', res.rows[0])
     return res.rows[0];
   }).catch((error) => {
     console.log(error);
@@ -73,8 +72,24 @@ const addUser = function (user) {
  * @param {string} guest_id The id of the user.
  * @return {Promise<[{}]>} A promise to the reservations.
  */
+
 const getAllReservations = function (guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  return pool.query(`
+  SELECT reservations.id, properties.title, properties.cost_per_night, reservations.start_date, avg(rating) as average_rating
+  FROM reservations
+  JOIN properties ON reservations.property_id = properties.id
+  JOIN property_reviews ON properties.id = property_reviews.property_id
+  WHERE reservations.guest_id = $1
+  GROUP BY properties.id, reservations.id
+  ORDER BY reservations.start_date
+  LIMIT $2;
+    `, [guest_id, limit])
+    .then((res) => {
+      console.log('here is the reservations: ', res.rows)
+      return res.rows;
+    }).catch((error) => {
+      console.log('there was an error: ', error)
+    })
 };
 
 /// Properties
